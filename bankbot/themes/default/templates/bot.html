@@ -1,0 +1,68 @@
+{% extends 'index.html' %}
+{% block styles %}
+    <style>
+        /* Chat container */
+        #chat-container {
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        /* Chat log */
+        #chat-log {
+            margin-bottom: 10px;
+        }
+
+        .bot-message {
+            color: #007bff;
+        }
+
+        /* User input form */
+        #user-input-form {
+            display: flex;
+            align-items: center;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 5px;
+        }
+
+        #user-input:focus {
+            outline: none;
+        }
+
+        #user-input::placeholder {
+            color: #999;
+        }
+
+        button[type="submit"] {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    <h1>Welcome to the Bank Chatbot!</h1>
+    <div id="chat-container">
+        <div id="chat-log">
+            {% if response %}
+                <p><strong>Chatbot:</strong> {{ response }}</p>
+            {% endif %}
+        </div>
+        <form id="user-input-form" action="{% url 'chatbot' %}" method="post">
+            {% csrf_token %}
+            <input type="text" id="user-input" name="user_input" placeholder="Enter your message">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+{% endblock %}
