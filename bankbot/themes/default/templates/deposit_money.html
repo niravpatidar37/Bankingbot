@@ -1,0 +1,12 @@
+{% extends 'index.html' %}
+
+{% block content %}
+  <h1>Deposit Money to Account Number: {{ account.account_number }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    <label for="amount">Amount:</label>
+    <input type="number" id="amount" name="amount" step="0.01" required>
+    <input type="submit" value="Deposit">
+  </form>
+  <a href="{% url 'transaction_list' account_number=account.account_number %}">Back to Transaction List</a>
+{% endblock %}

@@ -7,7 +7,22 @@ from django.contrib import messages
 from reportlab.pdfgen import canvas
 from .models import Customer, Account, Transaction, Statement, TransactionEntry, Report, Branch, Loan, CreditCard, BillPayment, Beneficiary, InterestRate, SecurityQuestion, Feedback
 from datetime import datetime
-
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
+import pandas as pd
+import numpy as np
+import pickle
+import operator
+from sklearn.svm import SVC
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split as tts
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import LabelEncoder as LE
+from sklearn.metrics.pairwise import cosine_similarity
+import random
+import nltk
+from nltk.stem.lancaster import LancasterStemmer
 def register(request):
     if request.method == 'POST':
         form = SignupForm(request.POST)
@@ -228,20 +243,79 @@ def generate_statement_pdf(request, statement_id):
 
 #Bot
 
+# def chatbot(request):
+#     response = ''
+
+#     if request.method == 'POST':
+#         user_input = request.POST.get('user_input')
+
+#         if user_input.lower() == 'hello':
+#             response = 'Hello! How can I help you?'
+#         elif user_input.lower() == 'time':
+#             current_time = datetime.now().strftime('%H:%M:%S')
+#             response = 'The current time is ' + current_time
+#         elif user_input.lower() == 'exit':
+#             response = 'Thank you for using the Bank Chatbot. Goodbye!'
+#         else:
+#             response = "I'm sorry, I didn't understand. Could you please rephrase?"
+
+#     return render(request, 'bot.html', {'response': response})
+
+# views.py
+
+from django.views.decorators.csrf import ensure_csrf_cookie
+
 def chatbot(request):
-    response = ''
+    # Process user input (clean up and tokenization)
+    def cleanup(sentence):
+        # Define the stemmer here
+        stemmer = LancasterStemmer()
+        word_tok = nltk.word_tokenize(sentence)
+        stemmed_words = [stemmer.stem(w) for w in word_tok]
+        return ' '.join(stemmed_words)
 
-    if request.method == 'POST':
-        user_input = request.POST.get('user_input')
+    if request.method == "POST" and  request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest':
+        user_input = request.POST.get("user_input")
 
-        if user_input.lower() == 'hello':
-            response = 'Hello! How can I help you?'
-        elif user_input.lower() == 'time':
-            current_time = datetime.now().strftime('%H:%M:%S')
-            response = 'The current time is ' + current_time
-        elif user_input.lower() == 'exit':
-            response = 'Thank you for using the Bank Chatbot. Goodbye!'
-        else:
-            response = "I'm sorry, I didn't understand. Could you please rephrase?"
+        # Load the TF-IDF vectorizer and LabelEncoder
+        with open('tfv.pkl', 'rb') as tfv_file:
+            tfv = pickle.load(tfv_file)
 
-    return render(request, 'bot.html', {'response': response})
+        with open('le.pkl', 'rb') as le_file:
+            le = pickle.load(le_file)
+
+        # Load the trained model
+        with open('trained_model.pkl', 'rb') as model_file:
+            model = pickle.load(model_file)
+
+        # Load the dataset
+        data = pd.read_csv('BankFAQs.csv')
+
+        # Transform user input using the TF-IDF vectorizer
+        t_usr = tfv.transform([cleanup(user_input.strip().lower())])
+        class_ = model.predict(t_usr)[0]
+        class_ = np.atleast_1d(class_)  # Ensure class_ is at least 1D
+        class_label = le.inverse_transform(class_)[0]
+        question_set = data[data['Class'] == class_label]
+
+        # Get the most relevant response from the dataset
+        cos_sims = []
+        for question in question_set['Question']:
+            sims = cosine_similarity(tfv.transform([question]), t_usr)
+            cos_sims.append(sims)
+
+        ind = cos_sims.index(max(cos_sims))
+        response = data['Answer'][question_set.index[ind]]
+
+        # Get the user's previous questions from the session
+        user_questions = request.session.get('user_questions', [])
+        # Add the current user input to the list
+        user_questions.append(user_input)
+        # Save the updated user questions back to the session
+        request.session['user_questions'] = user_questions
+
+        return JsonResponse({"response": response})
+    else:
+        # Get the user's previous questions from the session
+        user_questions = request.session.get('user_questions', [])
+        return render(request, "bot.html", {"user_questions": user_questions})

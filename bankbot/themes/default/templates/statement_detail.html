@@ -1,0 +1,20 @@
+
+{% block content %}
+  <h1>Statement Detail</h1>
+  <p>Statement ID: {{ statement.id }}</p>
+  <p>Date: {{ statement.date }}</p>
+  <p>Description: {{ statement.description }}</p>
+  
+  <h2>Transaction Entries:</h2>
+  <ul>
+    {% for entry in entries %}
+      <li>
+        <p>Transaction ID: {{ entry.transaction.id }}</p>
+        <p>Type: {{ entry.transaction.get_transaction_type_display }}</p>
+        <p>Amount: {{ entry.amount }}</p>
+      </li>
+    {% endfor %}
+  </ul>
+  
+  <a href="{% url 'transaction_list' account_number=statement.account.account_number %}">Back to Transaction List</a>
+{% endblock %}

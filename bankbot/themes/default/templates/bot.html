@@ -22,6 +22,7 @@
         #user-input-form {
             display: flex;
             align-items: center;
+            margin-top: 10px;
         }
 
         #user-input {
@@ -52,17 +53,46 @@
     </style>
 {% endblock %}
 {% block content %}
-    <h1>Welcome to the Bank Chatbot!</h1>
+<div>
+    <h1>Bank Chatbot</h1>
     <div id="chat-container">
         <div id="chat-log">
-            {% if response %}
-                <p><strong>Chatbot:</strong> {{ response }}</p>
-            {% endif %}
+            {% for question, response in chat_log %}
+                <p class="user-message">You: {{ question }}</p>
+                <p class="bot-message">Bot: {{ response }}</p>
+            {% endfor %}
         </div>
-        <form id="user-input-form" action="{% url 'chatbot' %}" method="post">
-            {% csrf_token %}
-            <input type="text" id="user-input" name="user_input" placeholder="Enter your message">
-            <button type="submit">Send</button>
-        </form>
     </div>
+    <div id="user-input-form">
+        <input type="text" id="user_input" placeholder="Ask a question...">
+        <button id="submit_btn">Submit</button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $("#submit_btn").click(function() {
+            var user_input = $("#user_input").val();
+            $("#user_input").val(""); // Clear the input field
+
+            $.ajax({
+                type: "POST",
+                url: "{% url 'chatbot' %}",
+                data: {
+                    'user_input': user_input,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    // Display the chatbot's response
+                    $("#chat-log").append("<p>You: " + user_input + "</p>");
+                    $("#chat-log").append("<p class='bot-message'>Bot: " + response.response + "</p>");
+                },
+                error: function(xhr, status, error) {
+                    console.log(error);
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock %}
